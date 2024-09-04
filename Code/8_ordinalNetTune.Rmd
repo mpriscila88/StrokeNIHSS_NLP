@@ -1,0 +1,56 @@
+---
+title: "stats_dm"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+
+# In this script we use ordinalNetTune with LASSO by default
+# to find a relevant set of features to train our model
+
+
+library("readxl")
+library("ordinalNet")
+library("MASS")
+ 
+x <- read.csv('x_train_variables.csv')
+
+
+aux <- as.matrix(x)
+x_train <- matrix(aux, ncol = ncol(x), dimnames = NULL)
+
+
+X_train <- read.csv('x_train_outcomes.csv')
+
+y <- X_train$nihss_score
+
+y[y <= 4] = 0
+y[(y >= 5) & (y <= 15)] = 1
+y[(y>= 16) & (y <= 20)] = 2
+y[y>= 21] = 3
+
+y_train <- as.factor(y)
+
+
+set.seed(1)
+
+# Hyperparameter tuning - select lambda by cross validation
+tunefit <- ordinalNetTune(x_train, y_train, lambdaVals = NULL, folds = NULL, nFolds = 5, printProgress = TRUE)
+
+summary(tunefit)
+plot(tunefit)
+
+saveRDS(tunefit, "tune.rds")
+
+lambdas = tunefit$lambdaVals
+
+bestLambdaIndex <- which.max(rowMeans(tunefit$loglik))
+
+coef13<-coef(tunefit$fit, whichLambda=bestLambdaIndex, matrix=TRUE)
+write.matrix(coef13,file='coef13.csv')
+
+```
+
+
+

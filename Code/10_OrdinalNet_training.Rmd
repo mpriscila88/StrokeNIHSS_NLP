@@ -1,0 +1,70 @@
+---
+title: "stats_dm"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+# In this script we train a model using the dataset with relevant features 
+# obtained from 1_ordinalNetTune.Rmd, using adjacent category family and logit link
+
+# We apply the model in the test and validation sets
+
+library("readxl")
+library("ordinalNet")
+library("MASS")
+
+ 
+x <- read.csv('xtrain_variables13.csv')
+
+aux <- as.matrix(x)
+x_train <- matrix(aux, ncol = ncol(x), dimnames = NULL)
+
+X_train <- read.csv('x_train_outcomes.csv')
+
+y <- X_train$nihss_score
+
+y[y <= 4] = 0
+y[(y >= 5) & (y <= 15)] = 1
+y[(y>= 16) & (y <= 20)] = 2
+y[y>= 21] = 3
+
+y_train <- as.factor(y)
+
+
+
+set.seed(1)
+
+# Fit parallel adjacent category logit model
+fit1 <- ordinalNet(x_train, y_train, family="acat", link="logit",
+parallelTerms=TRUE, nonparallelTerms=FALSE, standardize = FALSE, reverse=FALSE)
+
+#summary(fit1)
+#saveRDS(fit1, "modelR.rds")
+#fit1 <- readRDS("modelR.rds")
+#bestLambdaIndex <- which.max(fit1$loglik)
+
+coef20<-coef(fit1, whichLambda=bestLambdaIndex, matrix=TRUE)
+write.matrix(coef20,file='coef20.csv')
+
+x <- read.csv('xtest_variables13.csv')
+
+aux <- as.matrix(x)
+x_test <- matrix(aux, ncol = ncol(x), dimnames = NULL)
+
+yt <- predict(fit1, type='response', x_test) 
+write.csv(yt, "y_pred_test20.csv")
+
+
+##validation set
+
+x <- read.csv('x_validation_variables13.csv')
+
+aux <- as.matrix(x)
+x_test <- matrix(aux, ncol = ncol(x), dimnames = NULL)
+
+yt <- predict(fit1, type='response', x_test)  
+write.csv(yt, "y_pred_validation20.csv")
+```
+
+
